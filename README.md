@@ -6,7 +6,7 @@ API REST para gestión de grupos de estudio, desarrollada con Node.js + Express 
 
 ## 🌐 URL de producción
 
-[https://studysync-api-jrlopez.onrender.com](https://studysync-api-jrlopez.onrender.com)
+https://studysync-api-jrlopez.onrender.com
 
 ---
 
