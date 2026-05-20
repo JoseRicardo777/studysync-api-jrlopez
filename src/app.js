@@ -32,15 +32,15 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/routes/*.js'], // Aquí busca los comentarios JSDoc
+  apis: ['./src/routes/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// Ruta para ver Swagger UI
+// Ruta para Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Ruta para obtener el JSON de Swagger (opcional)
+// Ruta para obtener el JSON de Swagger
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
