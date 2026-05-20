@@ -2,9 +2,38 @@
 let grupos = [];
 let nextId = 1;
 
-// Obtener todos los grupos
+// Obtener todos los grupos CON FILTROS Y BÚSQUEDA
 const getAllGrupos = (req, res) => {
-  res.status(200).json(grupos);
+  let resultados = [...grupos];
+  
+  // 🔍 FILTRO por materia (ej: ?materia=Fisica)
+  const materia = req.query.materia;
+  if (materia) {
+    resultados = resultados.filter(g => 
+      g.materia.toLowerCase().includes(materia.toLowerCase())
+    );
+  }
+  
+  // 🔍 BÚSQUEDA por nombre (ej: ?q=algoritmos)
+  const busqueda = req.query.q;
+  if (busqueda) {
+    resultados = resultados.filter(g => 
+      g.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+      g.materia.toLowerCase().includes(busqueda.toLowerCase())
+    );
+  }
+  
+  // 📄 PAGINACIÓN (ej: ?page=1&limit=5)
+  const page = parseInt(req.query.page);
+  const limit = parseInt(req.query.limit);
+  
+  if (page && limit) {
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    resultados = resultados.slice(startIndex, endIndex);
+  }
+  
+  res.status(200).json(resultados);
 };
 
 // Obtener grupo por ID

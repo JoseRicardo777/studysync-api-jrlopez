@@ -39,8 +39,29 @@ const grupoController = require('../controllers/grupoController');
  * @swagger
  * /api/grupos:
  *   get:
- *     summary: Obtiene todos los grupos
+ *     summary: Obtiene todos los grupos (con filtros opcionales)
  *     tags: [Grupos]
+ *     parameters:
+ *       - in: query
+ *         name: materia
+ *         schema:
+ *           type: string
+ *         description: Filtra por materia (ej. ?materia=Fisica)
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Búsqueda por nombre o materia (ej. ?q=algoritmos)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Número de página para paginación (ej. ?page=1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Cantidad de resultados por página (ej. ?limit=5)
  *     responses:
  *       200:
  *         description: Lista de grupos
