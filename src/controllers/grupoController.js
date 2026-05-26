@@ -1,39 +1,38 @@
-// Datos en memoria (simula DB)
+// Datos en memoria
 let grupos = [];
 let nextId = 1;
 
-// Obtener todos los grupos CON FILTROS Y BÚSQUEDA
+// Importar Redis para publicar mensajes
+const redisPublisher = require('../config/redis');
+
+// Función auxiliar para publicar eventos
+const publicarEvento = async (tipo, payload) => {
+  const mensaje = {
+    tipo: tipo,
+    payload: payload,
+    timestamp: new Date().toISOString(),
+    version: '1.0'
+  };
+  
+  // Publicar en el canal principal
+  await redisPublisher.publish('study:grupo:eventos', JSON.stringify(mensaje));
+  
+  // Publicar en canal específico según el tipo de evento
+  let canalEspecifico = '';
+  if (tipo === 'GRUPO_CREADO') canalEspecifico = 'study:grupo:creado';
+  if (tipo === 'GRUPO_ACTUALIZADO') canalEspecifico = 'study:grupo:actualizado';
+  if (tipo === 'GRUPO_ELIMINADO') canalEspecifico = 'study:grupo:eliminado';
+  
+  if (canalEspecifico) {
+    await redisPublisher.publish(canalEspecifico, JSON.stringify(mensaje));
+  }
+  
+  console.log(`📢 Evento publicado: ${tipo}`, payload);
+};
+
+// Obtener todos los grupos
 const getAllGrupos = (req, res) => {
-  let resultados = [...grupos];
-  
-  // 🔍 FILTRO por materia (ej: ?materia=Fisica)
-  const materia = req.query.materia;
-  if (materia) {
-    resultados = resultados.filter(g => 
-      g.materia.toLowerCase().includes(materia.toLowerCase())
-    );
-  }
-  
-  // 🔍 BÚSQUEDA por nombre (ej: ?q=algoritmos)
-  const busqueda = req.query.q;
-  if (busqueda) {
-    resultados = resultados.filter(g => 
-      g.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      g.materia.toLowerCase().includes(busqueda.toLowerCase())
-    );
-  }
-  
-  // 📄 PAGINACIÓN (ej: ?page=1&limit=5)
-  const page = parseInt(req.query.page);
-  const limit = parseInt(req.query.limit);
-  
-  if (page && limit) {
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    resultados = resultados.slice(startIndex, endIndex);
-  }
-  
-  res.status(200).json(resultados);
+  res.status(200).json(grupos);
 };
 
 // Obtener grupo por ID
@@ -48,11 +47,10 @@ const getGrupoById = (req, res) => {
   res.status(200).json(grupo);
 };
 
-// Crear un nuevo grupo
-const createGrupo = (req, res) => {
+// Crear un nuevo grupo (PUBLICA EVENTO)
+const createGrupo = async (req, res) => {
   const { nombre, materia, integrantes } = req.body;
 
-  // Validación de campos obligatorios
   if (!nombre || !materia || !integrantes) {
     return res.status(400).json({
       error: 'Faltan campos obligatorios',
@@ -73,11 +71,15 @@ const createGrupo = (req, res) => {
   };
 
   grupos.push(nuevoGrupo);
+  
+  // 📢 PUBLICAR EVENTO
+  await publicarEvento('GRUPO_CREADO', nuevoGrupo);
+  
   res.status(201).json(nuevoGrupo);
 };
 
-// Actualizar un grupo completo (PUT)
-const updateGrupo = (req, res) => {
+// Actualizar un grupo (PUBLICA EVENTO)
+const updateGrupo = async (req, res) => {
   const id = parseInt(req.params.id);
   const { nombre, materia, integrantes } = req.body;
 
@@ -86,7 +88,6 @@ const updateGrupo = (req, res) => {
     return res.status(404).json({ error: `Grupo con ID ${id} no encontrado` });
   }
 
-  // Validación de campos
   if (!nombre || !materia || !integrantes) {
     return res.status(400).json({
       error: 'Faltan campos obligatorios para actualización completa',
@@ -98,7 +99,7 @@ const updateGrupo = (req, res) => {
     return res.status(400).json({ error: 'El campo "integrantes" debe ser un número positivo' });
   }
 
-  grupos[index] = {
+  const grupoActualizado = {
     ...grupos[index],
     nombre,
     materia,
@@ -106,11 +107,16 @@ const updateGrupo = (req, res) => {
     updatedAt: new Date()
   };
 
-  res.status(200).json(grupos[index]);
+  grupos[index] = grupoActualizado;
+  
+  // 📢 PUBLICAR EVENTO
+  await publicarEvento('GRUPO_ACTUALIZADO', grupoActualizado);
+  
+  res.status(200).json(grupoActualizado);
 };
 
-// Eliminar un grupo
-const deleteGrupo = (req, res) => {
+// Eliminar un grupo (PUBLICA EVENTO)
+const deleteGrupo = async (req, res) => {
   const id = parseInt(req.params.id);
   const index = grupos.findIndex(g => g.id === id);
 
@@ -118,7 +124,12 @@ const deleteGrupo = (req, res) => {
     return res.status(404).json({ error: `Grupo con ID ${id} no encontrado` });
   }
 
+  const grupoEliminado = grupos[index];
   grupos.splice(index, 1);
+  
+  // 📢 PUBLICAR EVENTO
+  await publicarEvento('GRUPO_ELIMINADO', { id: grupoEliminado.id, nombre: grupoEliminado.nombre });
+  
   res.status(200).json({ message: `Grupo con ID ${id} eliminado correctamente` });
 };
 
