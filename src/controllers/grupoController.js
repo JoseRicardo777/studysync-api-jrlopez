@@ -1,53 +1,60 @@
-// Datos en memoria
-let grupos = [];
-let nextId = 1;
+// src/controllers/grupoController.js
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-// Importar Redis para publicar mensajes
-const redisPublisher = require('../config/redis');
+// Obtener todos los grupos (CON FILTROS Y PAGINACIÓN)
+const getAllGrupos = async (req, res) => {
+  const { materia, q, page, limit } = req.query;
 
-// Función auxiliar para publicar eventos
-const publicarEvento = async (tipo, payload) => {
-  const mensaje = {
-    tipo: tipo,
-    payload: payload,
-    timestamp: new Date().toISOString(),
-    version: '1.0'
-  };
-  
-  // Publicar en el canal principal
-  await redisPublisher.publish('study:grupo:eventos', JSON.stringify(mensaje));
-  
-  // Publicar en canal específico según el tipo de evento
-  let canalEspecifico = '';
-  if (tipo === 'GRUPO_CREADO') canalEspecifico = 'study:grupo:creado';
-  if (tipo === 'GRUPO_ACTUALIZADO') canalEspecifico = 'study:grupo:actualizado';
-  if (tipo === 'GRUPO_ELIMINADO') canalEspecifico = 'study:grupo:eliminado';
-  
-  if (canalEspecifico) {
-    await redisPublisher.publish(canalEspecifico, JSON.stringify(mensaje));
+  // Construir filtros
+  let where = {};
+  if (materia) {
+    where.materia = { contains: materia, mode: 'insensitive' };
   }
-  
-  console.log(`📢 Evento publicado: ${tipo}`, payload);
-};
+  if (q) {
+    where.OR = [
+      { nombre: { contains: q, mode: 'insensitive' } },
+      { materia: { contains: q, mode: 'insensitive' } }
+    ];
+  }
 
-// Obtener todos los grupos
-const getAllGrupos = (req, res) => {
-  res.status(200).json(grupos);
+  // Paginación
+  let pagination = {};
+  if (page && limit) {
+    pagination.skip = (parseInt(page) - 1) * parseInt(limit);
+    pagination.take = parseInt(limit);
+  }
+
+  try {
+    const grupos = await prisma.grupo.findMany({
+      where,
+      orderBy: { id: 'asc' },
+      ...pagination
+    });
+    res.status(200).json(grupos);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al obtener los grupos" });
+  }
 };
 
 // Obtener grupo por ID
-const getGrupoById = (req, res) => {
-  const id = parseInt(req.params.id);
-  const grupo = grupos.find(g => g.id === id);
-
-  if (!grupo) {
-    return res.status(404).json({ error: `Grupo con ID ${id} no encontrado` });
+const getGrupoById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const grupo = await prisma.grupo.findUnique({
+      where: { id: parseInt(id) }
+    });
+    if (!grupo) {
+      return res.status(404).json({ error: `Grupo con ID ${id} no encontrado` });
+    }
+    res.status(200).json(grupo);
+  } catch (error) {
+    res.status(500).json({ error: "Error al buscar el grupo" });
   }
-
-  res.status(200).json(grupo);
 };
 
-// Crear un nuevo grupo (PUBLICA EVENTO)
+// Crear un grupo
 const createGrupo = async (req, res) => {
   const { nombre, materia, integrantes } = req.body;
 
@@ -62,75 +69,54 @@ const createGrupo = async (req, res) => {
     return res.status(400).json({ error: 'El campo "integrantes" debe ser un número positivo' });
   }
 
-  const nuevoGrupo = {
-    id: nextId++,
-    nombre,
-    materia,
-    integrantes,
-    createdAt: new Date()
-  };
-
-  grupos.push(nuevoGrupo);
-  
-  // 📢 PUBLICAR EVENTO
-  await publicarEvento('GRUPO_CREADO', nuevoGrupo);
-  
-  res.status(201).json(nuevoGrupo);
+  try {
+    const nuevoGrupo = await prisma.grupo.create({
+      data: { nombre, materia, integrantes }
+    });
+    res.status(201).json(nuevoGrupo);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al crear el grupo en la base de datos" });
+  }
 };
 
-// Actualizar un grupo (PUBLICA EVENTO)
+// Actualizar un grupo
 const updateGrupo = async (req, res) => {
-  const id = parseInt(req.params.id);
+  const { id } = req.params;
   const { nombre, materia, integrantes } = req.body;
 
-  const index = grupos.findIndex(g => g.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: `Grupo con ID ${id} no encontrado` });
-  }
-
   if (!nombre || !materia || !integrantes) {
-    return res.status(400).json({
-      error: 'Faltan campos obligatorios para actualización completa',
-      required: ['nombre', 'materia', 'integrantes']
+    return res.status(400).json({ error: 'Faltan campos obligatorios para actualización' });
+  }
+
+  try {
+    const grupoActualizado = await prisma.grupo.update({
+      where: { id: parseInt(id) },
+      data: { nombre, materia, integrantes }
     });
+    res.status(200).json(grupoActualizado);
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: `Grupo con ID ${id} no encontrado` });
+    }
+    res.status(500).json({ error: "Error al actualizar el grupo" });
   }
-
-  if (typeof integrantes !== 'number' || integrantes <= 0) {
-    return res.status(400).json({ error: 'El campo "integrantes" debe ser un número positivo' });
-  }
-
-  const grupoActualizado = {
-    ...grupos[index],
-    nombre,
-    materia,
-    integrantes,
-    updatedAt: new Date()
-  };
-
-  grupos[index] = grupoActualizado;
-  
-  // 📢 PUBLICAR EVENTO
-  await publicarEvento('GRUPO_ACTUALIZADO', grupoActualizado);
-  
-  res.status(200).json(grupoActualizado);
 };
 
-// Eliminar un grupo (PUBLICA EVENTO)
+// Eliminar un grupo
 const deleteGrupo = async (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = grupos.findIndex(g => g.id === id);
-
-  if (index === -1) {
-    return res.status(404).json({ error: `Grupo con ID ${id} no encontrado` });
+  const { id } = req.params;
+  try {
+    await prisma.grupo.delete({
+      where: { id: parseInt(id) }
+    });
+    res.status(200).json({ message: `Grupo con ID ${id} eliminado correctamente` });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: `Grupo con ID ${id} no encontrado` });
+    }
+    res.status(500).json({ error: "Error al eliminar el grupo" });
   }
-
-  const grupoEliminado = grupos[index];
-  grupos.splice(index, 1);
-  
-  // 📢 PUBLICAR EVENTO
-  await publicarEvento('GRUPO_ELIMINADO', { id: grupoEliminado.id, nombre: grupoEliminado.nombre });
-  
-  res.status(200).json({ message: `Grupo con ID ${id} eliminado correctamente` });
 };
 
 module.exports = {

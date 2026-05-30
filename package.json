@@ -10,6 +10,7 @@
     "author": "Jose Ricardo Lopez Flores",
     "license": "MIT",
     "dependencies": {
+        "@prisma/client": "^5.22.0",
         "dotenv": "^16.0.3",
         "express": "^4.18.2",
         "ioredis": "^5.11.0",
@@ -17,6 +18,10 @@
         "swagger-ui-express": "^5.0.1"
     },
     "devDependencies": {
-        "nodemon": "^2.0.22"
+        "@types/node": "^25.9.1",
+        "nodemon": "^2.0.22",
+        "prisma": "^5.22.0",
+        "tsx": "^4.22.3",
+        "typescript": "^6.0.3"
     }
 }
