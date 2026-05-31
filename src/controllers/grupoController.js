@@ -1,5 +1,7 @@
 // src/controllers/grupoController.js
 const { PrismaClient } = require('@prisma/client');
+const { publicarEvento } = require('../config/redis');
+
 const prisma = new PrismaClient();
 
 // Obtener todos los grupos (CON FILTROS Y PAGINACIÓN)
@@ -54,7 +56,7 @@ const getGrupoById = async (req, res) => {
   }
 };
 
-// Crear un grupo
+// Crear un grupo (PUBLICA EVENTO)
 const createGrupo = async (req, res) => {
   const { nombre, materia, integrantes } = req.body;
 
@@ -73,6 +75,10 @@ const createGrupo = async (req, res) => {
     const nuevoGrupo = await prisma.grupo.create({
       data: { nombre, materia, integrantes }
     });
+    
+    // PUBLICAR EVENTO EN REDIS
+    await publicarEvento('GRUPO_CREADO', nuevoGrupo);
+    
     res.status(201).json(nuevoGrupo);
   } catch (error) {
     console.error(error);
@@ -80,7 +86,7 @@ const createGrupo = async (req, res) => {
   }
 };
 
-// Actualizar un grupo
+// Actualizar un grupo (PUBLICA EVENTO)
 const updateGrupo = async (req, res) => {
   const { id } = req.params;
   const { nombre, materia, integrantes } = req.body;
@@ -94,6 +100,10 @@ const updateGrupo = async (req, res) => {
       where: { id: parseInt(id) },
       data: { nombre, materia, integrantes }
     });
+    
+    // PUBLICAR EVENTO EN REDIS
+    await publicarEvento('GRUPO_ACTUALIZADO', grupoActualizado);
+    
     res.status(200).json(grupoActualizado);
   } catch (error) {
     if (error.code === 'P2025') {
@@ -103,13 +113,28 @@ const updateGrupo = async (req, res) => {
   }
 };
 
-// Eliminar un grupo
+// Eliminar un grupo (PUBLICA EVENTO)
 const deleteGrupo = async (req, res) => {
   const { id } = req.params;
   try {
+    const grupoEliminado = await prisma.grupo.findUnique({
+      where: { id: parseInt(id) }
+    });
+    
+    if (!grupoEliminado) {
+      return res.status(404).json({ error: `Grupo con ID ${id} no encontrado` });
+    }
+    
     await prisma.grupo.delete({
       where: { id: parseInt(id) }
     });
+    
+    // PUBLICAR EVENTO EN REDIS
+    await publicarEvento('GRUPO_ELIMINADO', {
+      id: grupoEliminado.id,
+      nombre: grupoEliminado.nombre
+    });
+    
     res.status(200).json({ message: `Grupo con ID ${id} eliminado correctamente` });
   } catch (error) {
     if (error.code === 'P2025') {

@@ -1,3 +1,4 @@
+// src/config/redis.js
 const Redis = require('ioredis');
 require('dotenv').config();
 
@@ -31,4 +32,24 @@ redisPublisher.on('ready', () => {
   console.log('🚀 Redis (Publicador) listo para usar');
 });
 
-module.exports = redisPublisher;
+// Función para publicar eventos
+const publicarEvento = async (tipo, payload) => {
+  try {
+    const canal = `study:grupo:${tipo.toLowerCase()}`;
+    const mensaje = JSON.stringify({
+      tipo: tipo,
+      payload: payload,
+      timestamp: new Date().toISOString(),
+      version: '1.0'
+    });
+    
+    await redisPublisher.publish(canal, mensaje);
+    console.log(`📢 Evento publicado: ${tipo} en canal ${canal}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Error publicando evento ${tipo}:`, error.message);
+    return false;
+  }
+};
+
+module.exports = { redisPublisher, publicarEvento };
