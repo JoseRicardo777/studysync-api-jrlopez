@@ -1,11 +1,12 @@
 // prisma/schema.prisma
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "windows"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://postgres.vgjvkintejgmrunxpxrx:Josericardo200208j@aws-1-us-east-1.pooler.supabase.com:5432/postgres?pgbouncer=true"
+  url      = env("DATABASE_URL")
 }
 
 model Grupo {
