@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudySync - Dashboard Profesional</title>
+    <link rel="stylesheet" href="/app.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="logo">📚</span>
+                <h2>StudySync</h2>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-page="sessions">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-label">Mis Sesiones</span>
+                </a>
+                <a href="#" class="nav-item" data-page="create">
+                    <span class="nav-icon">✏️</span>
+                    <span class="nav-label">Crear Sesión</span>
+                </a>
+                <a href="#" class="nav-item" data-page="analytics">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-label">Analytics</span>
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">Configuración</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Botón toggle sidebar -->
+        <div class="toggle-btn" id="toggleSidebar">
+            <span>◀</span>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                <div class="top-bar-right">
+                    <button class="theme-toggle" id="themeToggle">
+                        <span>🌙</span>
+                        <span>Modo Oscuro</span>
+                    </button>
+                    <div class="user-info">
+                        <div class="user-avatar" id="userAvatar">👤</div>
+                        <span id="userName">Usuario</span>
+                    </div>
+                    <button class="logout-btn" id="logoutBtn">Cerrar Sesión</button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area" id="contentArea">
+                <!-- Dashboard Page -->
+                <div id="page-dashboard">
+                    <div class="stats-grid" id="statsGrid">
+                        <div class="stat-card">
+                            <div class="stat-info">
+                                <h4>Total Sesiones</h4>
+                                <div class="stat-number" id="totalSessions">0</div>
+                            </div>
+                            <div class="stat-icon">📚</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-info">
+                                <h4>Materias</h4>
+                                <div class="stat-number" id="totalMaterias">0</div>
+                            </div>
+                            <div class="stat-icon">📖</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-info">
+                                <h4>Eventos en tiempo real</h4>
+                                <div class="stat-number" id="eventosCount">0</div>
+                            </div>
+                            <div class="stat-icon">📡</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-info">
+                                <h4>Integrantes totales</h4>
+                                <div class="stat-number" id="totalIntegrantes">0</div>
+                            </div>
+                            <div class="stat-icon">👥</div>
+                        </div>
+                    </div>
+
+                    <div class="two-columns">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">✏️ Crear Nueva Sesión</h3>
+                            </div>
+                            <form id="createSessionForm">
+                                <div class="form-group">
+                                    <label>Título de la sesión</label>
+                                    <input type="text" id="sessionTitle" class="form-control" placeholder="Ej: Álgebra Lineal - Matrices" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Materia</label>
+                                    <input type="text" id="sessionSubject" class="form-control" placeholder="Ej: Matemáticas" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Integrantes</label>
+                                    <input type="number" id="sessionMembers" class="form-control" placeholder="Número de integrantes" value="1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Descripción (opcional)</label>
+                                    <textarea id="sessionDescription" class="form-control" placeholder="Describe el contenido de la sesión..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Crear Sesión</button>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">📡 Eventos en Tiempo Real</h3>
+                                <span class="status-dot" id="wsStatus"></span>
+                            </div>
+                            <div id="eventsFeed" class="feed">
+                                <div class="text-center p-40 text-muted">Esperando eventos...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📖 Mis Sesiones de Estudio</h3>
+                            <button class="btn-refresh" onclick="window.cargarSesiones()">🔄</button>
+                        </div>
+                        <div id="sessionsGrid" class="sessions-grid">
+                            <div class="text-center p-40">Cargando sesiones...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Status badge -->
+    <div class="status-badge">
+        <span class="status-dot"></span>
+        <span id="connectionStatus">Conectado en tiempo real</span>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let socket = null;
+        let currentPage = 'dashboard';
+        let eventosCount = 0;
+
+        // Verificar token
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        // Obtener usuario
+        const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+        document.getElementById('userName').innerHTML = usuario.nombre || 'Usuario';
+        document.getElementById('userAvatar').innerHTML = (usuario.nombre || 'U').charAt(0).toUpperCase();
+
+        // ========== TOAST NOTIFICATIONS ==========
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '✅' : '❌'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ========== WEB SOCKET ==========
+        function conectarSocket() {
+            socket = io(API_URL, {
+                auth: { token },
+                transports: ['websocket', 'polling']
+            });
+
+            socket.on('connect', () => {
+                document.getElementById('connectionStatus').innerHTML = 'Conectado en tiempo real';
+                document.querySelector('.status-dot').style.background = '#22c55e';
+                showToast('Conectado al servidor en tiempo real', 'success');
+            });
+
+            socket.on('connect_error', () => {
+                document.getElementById('connectionStatus').innerHTML = 'Desconectado';
+                document.querySelector('.status-dot').style.background = '#ef4444';
+            });
+
+            socket.on('nuevo-evento', (evento) => {
+                eventosCount++;
+                document.getElementById('eventosCount').innerHTML = eventosCount;
+                agregarEventoAlFeed(evento);
+                window.cargarSesiones();
+                actualizarStats();
+                showToast(`📢 ${evento.tipo || 'Nuevo grupo'} creado`, 'success');
+            });
+        }
+
+        function agregarEventoAlFeed(evento) {
+            const feed = document.getElementById('eventsFeed');
+            const div = document.createElement('div');
+            div.className = 'event-item';
+            div.innerHTML = `
+                <div class="event-title">📢 ${evento.tipo || 'Nuevo grupo'}</div>
+                <div>📝 ${evento.payload?.nombre || evento.payload?.titulo || 'Sin título'}</div>
+                <div class="event-time">${new Date(evento.timestamp || Date.now()).toLocaleTimeString()}</div>
+            `;
+            feed.prepend(div);
+            if (feed.children.length > 10) feed.removeChild(feed.lastChild);
+        }
+
+        // ========== CRUD OPERATIONS ==========
+        window.cargarSesiones = async function() {
+            try {
+                const response = await fetch(`${API_URL}/api/grupos`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    mostrarSesiones(data);
+                    actualizarStats(data);
+                } else if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function mostrarSesiones(sesiones) {
+            const container = document.getElementById('sessionsGrid');
+            if (!sesiones || sesiones.length === 0) {
+                container.innerHTML = '<div class="text-center p-40 text-muted">No tienes sesiones de estudio aún. ¡Crea una!</div>';
+                return;
+            }
+
+            container.innerHTML = sesiones.map(s => `
+                <div class="session-card">
+                    <div class="session-title">📘 ${s.nombre || s.titulo}</div>
+                    <div class="session-meta">
+                        <span>📖 ${s.materia}</span>
+                        <span>👥 ${s.integrantes || 1} integrantes</span>
+                    </div>
+                    <div class="session-description">${s.descripcion || 'Sin descripción'}</div>
+                    <div class="session-date">📅 ${new Date(s.createdAt).toLocaleDateString()}</div>
+                </div>
+            `).join('');
+        }
+
+        async function actualizarStats(sesiones = null) {
+            if (!sesiones) {
+                try {
+                    const response = await fetch(`${API_URL}/api/grupos`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) sesiones = await response.json();
+                } catch (error) {}
+            }
+            
+            if (sesiones && sesiones.length > 0) {
+                document.getElementById('totalSessions').innerHTML = sesiones.length;
+                const materias = [...new Set(sesiones.map(s => s.materia))];
+                document.getElementById('totalMaterias').innerHTML = materias.length;
+                const totalInt = sesiones.reduce((sum, s) => sum + (s.integrantes || 1), 0);
+                document.getElementById('totalIntegrantes').innerHTML = totalInt;
+            }
+        }
+
+        // ========== CREAR SESIÓN ==========
+        document.getElementById('createSessionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nombre = document.getElementById('sessionTitle').value;
+            const materia = document.getElementById('sessionSubject').value;
+            const integrantes = parseInt(document.getElementById('sessionMembers').value);
+            const descripcion = document.getElementById('sessionDescription').value;
+
+            try {
+                const response = await fetch(`${API_URL}/api/grupos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ nombre, materia, integrantes, descripcion })
+                });
+
+                if (response.ok) {
+                    document.getElementById('sessionTitle').value = '';
+                    document.getElementById('sessionSubject').value = '';
+                    document.getElementById('sessionMembers').value = '1';
+                    document.getElementById('sessionDescription').value = '';
+                    window.cargarSesiones();
+                    showToast('✅ Sesión creada exitosamente', 'success');
+                } else if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                } else {
+                    showToast('❌ Error al crear la sesión', 'error');
+                }
+            } catch (error) {
+                showToast('❌ Error de conexión', 'error');
+            }
+        });
+
+        // ========== LOGOUT ==========
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await fetch(`${API_URL}/auth/logout`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (error) {}
+            
+            localStorage.removeItem('token');
+            localStorage.removeItem('usuario');
+            if (socket) socket.disconnect();
+            window.location.href = '/login.html';
+        });
+
+        // ========== THEME TOGGLE ==========
+        const themeToggle = document.getElementById('themeToggle');
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.innerHTML = '<span>☀️</span><span>Modo Claro</span>';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+                themeToggle.innerHTML = '<span>🌙</span><span>Modo Oscuro</span>';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                themeToggle.innerHTML = '<span>☀️</span><span>Modo Claro</span>';
+            }
+        });
+
+        // ========== SIDEBAR TOGGLE ==========
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('toggleSidebar');
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            toggleBtn.innerHTML = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+        });
+
+        // ========== NAVIGATION ==========
+        function navigateTo(page) {
+            currentPage = page;
+            const titles = { dashboard: 'Dashboard', sessions: 'Mis Sesiones', create: 'Crear Sesión', analytics: 'Analytics', settings: 'Configuración' };
+            document.getElementById('pageTitle').innerHTML = titles[page] || 'Dashboard';
+            
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+            
+            const contentArea = document.getElementById('contentArea');
+            if (page === 'dashboard') {
+                location.reload();
+            } else if (page === 'sessions') {
+                contentArea.innerHTML = `
+                    <div class="card">
+                        <div class="card-header"><h3 class="card-title">📖 Mis Sesiones de Estudio</h3></div>
+                        <div id="sessionsFullGrid" class="sessions-grid"></div>
+                    </div>
+                `;
+                mostrarSesionesFull();
+            } else if (page === 'create') {
+                contentArea.innerHTML = `
+                    <div class="card">
+                        <div class="card-header"><h3 class="card-title">✏️ Crear Nueva Sesión</h3></div>
+                        <form id="createFullForm">
+                            <div class="form-group"><label>Título</label><input type="text" id="fullTitle" class="form-control" required></div>
+                            <div class="form-group"><label>Materia</label><input type="text" id="fullSubject" class="form-control" required></div>
+                            <div class="form-group"><label>Integrantes</label><input type="number" id="fullMembers" class="form-control" value="1" required></div>
+                            <div class="form-group"><label>Descripción</label><textarea id="fullDesc" class="form-control"></textarea></div>
+                            <button type="submit" class="btn btn-primary">Crear Sesión</button>
+                        </form>
+                    </div>
+                `;
+                document.getElementById('createFullForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const response = await fetch(`${API_URL}/api/grupos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ nombre: document.getElementById('fullTitle').value, materia: document.getElementById('fullSubject').value, integrantes: parseInt(document.getElementById('fullMembers').value), descripcion: document.getElementById('fullDesc').value })
+                    });
+                    if (response.ok) {
+                        showToast('✅ Sesión creada', 'success');
+                        navigateTo('sessions');
+                    }
+                });
+            } else if (page === 'analytics') {
+                contentArea.innerHTML = `
+                    <div class="card">
+                        <div class="card-header"><h3 class="card-title">📈 Estadísticas</h3></div>
+                        <div class="stats-grid" id="analyticsStats"></div>
+                    </div>
+                `;
+                cargarAnalytics();
+            }
+        }
+
+        async function mostrarSesionesFull() {
+            const response = await fetch(`${API_URL}/api/grupos`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (response.ok) {
+                const data = await response.json();
+                const container = document.getElementById('sessionsFullGrid');
+                if (!data.length) container.innerHTML = '<div class="text-center p-40">No hay sesiones</div>';
+                else container.innerHTML = data.map(s => `<div class="session-card"><div class="session-title">📘 ${s.nombre}</div><div class="session-meta">📖 ${s.materia} | 👥 ${s.integrantes}</div><div class="session-description">${s.descripcion || ''}</div><div class="session-date">📅 ${new Date(s.createdAt).toLocaleDateString()}</div></div>`).join('');
+            }
+        }
+
+        async function cargarAnalytics() {
+            const response = await fetch(`${API_URL}/api/grupos`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (response.ok) {
+                const data = await response.json();
+                const materiasCount = {};
+                data.forEach(s => materiasCount[s.materia] = (materiasCount[s.materia] || 0) + 1);
+                const container = document.getElementById('analyticsStats');
+                container.innerHTML = `
+                    <div class="stat-card"><div class="stat-info"><h4>Total Sesiones</h4><div class="stat-number">${data.length}</div></div><div class="stat-icon">📚</div></div>
+                    <div class="stat-card"><div class="stat-info"><h4>Total Materias</h4><div class="stat-number">${Object.keys(materiasCount).length}</div></div><div class="stat-icon">📖</div></div>
+                    <div class="stat-card"><div class="stat-info"><h4>Materia más estudiada</h4><div class="stat-number">${Object.entries(materiasCount).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'N/A'}</div></div><div class="stat-icon">🏆</div></div>
+                `;
+            }
+        }
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                navigateTo(item.dataset.page);
+            });
+        });
+
+        // Exponer funciones globales
+        window.cargarSesiones = window.cargarSesiones;
+        window.actualizarStats = actualizarStats;
+        window.navigateTo = navigateTo;
+
+        // Inicializar
+        conectarSocket();
+        window.cargarSesiones();
+    </script>
+</body>
+</html>

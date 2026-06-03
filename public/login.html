@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudySync - Iniciar Sesión</title>
+    <link rel="stylesheet" href="/app.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>📚 StudySync</h1>
+            <h2>Bienvenido de vuelta</h2>
+            <form id="loginForm">
+                <input type="email" id="email" class="form-control" placeholder="Correo electrónico" required>
+                <input type="password" id="password" class="form-control" placeholder="Contraseña" required>
+                <button type="submit" class="btn btn-primary">Ingresar</button>
+            </form>
+            <div class="auth-footer">
+                ¿No tienes cuenta? <a href="/register.html">Regístrate aquí</a>
+            </div>
+            <div id="mensaje" class="mt-16"></div>
+        </div>
+    </div>
+    <script>
+        const API_URL = window.location.origin;
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const mensajeDiv = document.getElementById('mensaje');
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('usuario', JSON.stringify(data.usuario));
+                    window.location.href = '/dashboard.html';
+                } else {
+                    mensajeDiv.innerHTML = `<div class="text-error">❌ ${data.error || 'Credenciales inválidas'}</div>`;
+                }
+            } catch (error) {
+                mensajeDiv.innerHTML = '<div class="text-error">❌ Error de conexión</div>';
+            }
+        });
+    </script>
+</body>
+</html>

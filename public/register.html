@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudySync - Registro</title>
+    <link rel="stylesheet" href="/app.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>📚 StudySync</h1>
+            <h2>Crear una cuenta</h2>
+            <form id="registerForm">
+                <input type="text" id="nombre" class="form-control" placeholder="Nombre completo" required>
+                <input type="email" id="email" class="form-control" placeholder="Correo electrónico" required>
+                <input type="password" id="password" class="form-control" placeholder="Contraseña (mínimo 6 caracteres)" required>
+                <button type="submit" class="btn btn-primary">Registrarse</button>
+            </form>
+            <div class="auth-footer">
+                ¿Ya tienes cuenta? <a href="/login.html">Inicia sesión aquí</a>
+            </div>
+            <div id="mensaje" class="mt-16"></div>
+        </div>
+    </div>
+    <script>
+        const API_URL = window.location.origin;
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('nombre').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const mensajeDiv = document.getElementById('mensaje');
+            
+            if (password.length < 6) {
+                mensajeDiv.innerHTML = '<div class="text-error">❌ La contraseña debe tener al menos 6 caracteres</div>';
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, email, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    mensajeDiv.innerHTML = '<div class="text-success">✅ Usuario registrado. Redirigiendo...</div>';
+                    setTimeout(() => window.location.href = '/login.html', 2000);
+                } else {
+                    mensajeDiv.innerHTML = `<div class="text-error">❌ ${data.error || 'Error al registrar'}</div>`;
+                }
+            } catch (error) {
+                mensajeDiv.innerHTML = '<div class="text-error">❌ Error de conexión</div>';
+            }
+        });
+    </script>
+</body>
+</html>

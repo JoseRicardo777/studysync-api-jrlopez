@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'StudySync API - Infraestructura como Código para AWS'
+
+Parameters:
+  Ambiente:
+    Type: String
+    Default: development
+    AllowedValues:
+      - development
+      - staging
+      - production
+
+Resources:
+  # Bucket S3 para almacenamiento de archivos
+  StudySyncBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub studysync-adjuntos-${Ambiente}
+      VersioningConfiguration:
+        Status: Enabled
+
+  # Tabla DynamoDB para registro de eventos
+  StudySyncEventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub studysync-eventos-${Ambiente}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # Parámetro SSM para configuración centralizada
+  StudySyncApiUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /studysync/${Ambiente}/api-url
+      Type: String
+      Value: https://studysync-api-jrlopez.onrender.com
+      Description: URL de la API de StudySync
+
+Outputs:
+  BucketName:
+    Description: Nombre del bucket S3 creado
+    Value: !Ref StudySyncBucket
+  
+  TableName:
+    Description: Nombre de la tabla DynamoDB creada
+    Value: !Ref StudySyncEventsTable
+  
+  ApiUrlParameter:
+    Description: Nombre del parámetro SSM creado
+    Value: !Ref StudySyncApiUrl

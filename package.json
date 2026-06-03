@@ -1,0 +1,36 @@
+{
+    "name": "studysync-api-jrlopez",
+    "version": "1.0.0",
+    "description": "API REST para gestión de grupos de estudio - José Ricardo López Flores",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js",
+        "build": "npx prisma generate",
+        "test": "cross-env NODE_ENV=test jest --runInBand --testTimeout=10000 --setupFilesAfterEnv ./jest.setup.js",
+        "test:watch": "cross-env NODE_ENV=test jest --watch --runInBand"
+    },
+    "author": "José Ricardo López Flores",
+    "license": "MIT",
+    "dependencies": {
+        "@prisma/client": "^5.22.0",
+        "bcryptjs": "^2.4.3",
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.3",
+        "express": "^4.18.2",
+        "express-rate-limit": "^7.1.5",
+        "helmet": "^7.1.0",
+        "ioredis": "^5.4.1",
+        "jsonwebtoken": "^9.0.3",
+        "socket.io": "^4.8.3",
+        "swagger-jsdoc": "^6.2.8",
+        "swagger-ui-express": "^5.0.0"
+    },
+    "devDependencies": {
+        "cross-env": "^7.0.3",
+        "jest": "^29.7.0",
+        "nodemon": "^2.0.22",
+        "prisma": "^5.22.0",
+        "supertest": "^6.3.4"
+    }
+}
